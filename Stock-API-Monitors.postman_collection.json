@@ -1,0 +1,161 @@
+{
+	"info": {
+		"_postman_id": "37d4862a-aad7-4844-b8ab-fb01b6a27731",
+		"name": "Stock API Monitors",
+		"description": "Automated stock monitors",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Stock Monitor",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "e7943053-7c1b-4807-a1e6-362de51d47b1",
+						"exec": [
+							"//-----------------------------------------------------------------------------------------",
+							"//  STOCK PRICE CHECKS",
+							"//-----------------------------------------------------------------------------------------",
+							"",
+							"//Amazon Price Checks",
+							"aboveTest(\"AMZN\", 1375);  //check if AMZN > $1375",
+							"aboveTest(\"AMZN\", 1400);  //check if AMZN > $1400",
+							"aboveTest(\"AMZN\", 1425);  //check if AMZN > $1425",
+							"aboveTest(\"AMZN\", 1500);  //check if AMZN > $1500         <-- TEMP; REMOVE ON FAILURE",
+							"belowTest(\"AMZN\", 1520);  //check if AMZN < $1520         <-- TEMP; REMOVE ON FAILURE",
+							"",
+							"//Apple Price Checks",
+							"aboveTest(\"AAPL\", 155);   //check if AAPL > $155",
+							"belowTest(\"AAPL\", 170);   //check if AAPL < $170",
+							"",
+							"//GE Check-Ins (for fun)",
+							"aboveTest(\"GE\", 6.5);     //check if GE > $6.50",
+							"aboveTest(\"GE\", 7);       //check if GE > $7.00",
+							"belowTest(\"GE\", 7.8);     //check if GE < $7.80",
+							"belowTest(\"GE\", 8);       //check if GE < $8.00",
+							""
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"id": "cc62c674-2b04-4b34-963a-3e1bfd87ec59",
+						"exec": [
+							"//-----------------------------------------------------------------------------------------",
+							"//  STOCK SYMBOLS",
+							"//-----------------------------------------------------------------------------------------",
+							"",
+							"pm.environment.set(\"SYMBOLS\", \"AMZN, AAPL, GE\");"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "https://api.iextrading.com/1.0/stock/market/batch?symbols={{SYMBOLS}}&types=quote",
+					"protocol": "https",
+					"host": [
+						"api",
+						"iextrading",
+						"com"
+					],
+					"path": [
+						"1.0",
+						"stock",
+						"market",
+						"batch"
+					],
+					"query": [
+						{
+							"key": "symbols",
+							"value": "{{SYMBOLS}}"
+						},
+						{
+							"key": "types",
+							"value": "quote"
+						}
+					]
+				},
+				"description": "Test for low price on stock batches"
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"id": "aa12318c-8e68-4e6c-8fa6-4223bd445908",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"id": "df9fabb6-ec79-4b8c-8aa9-e2c409f01470",
+				"type": "text/javascript",
+				"exec": [
+					"//-----------------------------------------------------------------------------------------",
+					"//  GLOBAL ALIASES",
+					"//-----------------------------------------------------------------------------------------",
+					"",
+					"//aboveTest: test if the stock designated by \"symbol\" is trading above \"price\"",
+					"//           test failure signifies the stock price fell <= \"price\"",
+					"aboveTest = (symbol, price) => {",
+					"    pm.test(symbol + \" > $\" + price, () => {",
+					"        pm.expect(pm.response.json()[symbol].quote.iexRealtimePrice).to.be.above(price);",
+					"    });",
+					"};",
+					"",
+					"//belowTest: test if the stock designated by \"symbol\" is trading below \"price\"",
+					"//           test failure signifies the stock price rose >= \"price\"",
+					"belowTest = (symbol, price) => {",
+					"    pm.test(symbol + \" < $\" + price, () => {",
+					"        pm.expect(pm.response.json()[symbol].quote.iexRealtimePrice).to.be.at.most(price);",
+					"    });",
+					"};",
+					"",
+					"",
+					"",
+					"//-----------------------------------------------------------------------------------------",
+					"//  STANDARD INITIAL TESTS",
+					"//-----------------------------------------------------------------------------------------",
+					"",
+					"//basic HTTP error check",
+					"pm.test(\"Request OK\", () => {",
+					"    //check for status OK",
+					"    pm.response.to.be.ok;",
+					"    ",
+					"    //check if JSON parsable",
+					"    pm.response.to.be.withBody;",
+					"    pm.response.to.be.json;",
+					"});",
+					"",
+					"//basic IEX API error check",
+					"pm.test(\"IEX API OK\", () => {",
+					"    //sanity check response symbols to ensure they are valid",
+					"    pm.environment.get(\"SYMBOLS\").replace(/\\s/g, \"\").split(\",\").forEach(sym => {",
+					"        pm.expect(pm.response.json()).to.have.property(sym);",
+					"        pm.expect(pm.response.json()).to.have.nested.property(sym + \".quote.iexRealtimePrice\");",
+					"        pm.expect(pm.response.json()).to.have.nested.property(sym + \".quote.symbol\", sym);",
+					"    });",
+					"});",
+					""
+				]
+			}
+		}
+	]
+}
